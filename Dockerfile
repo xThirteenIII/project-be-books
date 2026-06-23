@@ -1,5 +1,12 @@
-FROM debian:stable-slim
+# Go Builder, avoids external building
+FROM golang:1.26-alpine AS builder
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN go build -o books ./cmd/api
 
-# COPY source destination
-COPY books /bin/books
+# Minimal image
+FROM debian:stable-slim
+COPY --from=builder /app/books /bin/books
 CMD ["/bin/books"]
