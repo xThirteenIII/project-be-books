@@ -11,10 +11,20 @@ services:
       - "3306:3306"
 
   rabbitmq:
-      image: rabbitmq:3.13.0-management
-      environment:
-        RABBITMQ_DEFAULT_USER: user
-        RABBITMQ_DEFAULT_PASS: password
-      ports:
-        - "5672:5672"
-        - "15672:15672"
+    image: rabbitmq:3.13.0-management
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  app:
+    build: . 
+    ports:
+      - "8010:8010"
+    depends_on:
+      - db
+      - rabbitmq
+    environment:
+      DB_DSN: "user:password@tcp(localhost:3306)/books?parseTime=true"
