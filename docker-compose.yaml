@@ -6,6 +6,7 @@ services:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_USER: user
       MYSQL_PASSWORD: password
+      MYSQL_DATABASE: books
     ports:
       - "3306:3306"
 
