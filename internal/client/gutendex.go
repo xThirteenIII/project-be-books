@@ -8,8 +8,8 @@ import (
 
 type Author struct {
 	Name      string `json:"name"`
-	BirthYear string `json:"birth_year"`
-	DeathYear string `json:"death_year"`
+	BirthYear int    `json:"birth_year"`
+	DeathYear int    `json:"death_year"` //DeathYear = 0 means the author is not dead yet.
 }
 
 type Format struct {
