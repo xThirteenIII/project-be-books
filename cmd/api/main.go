@@ -2,6 +2,7 @@ package main
 
 import (
 	"books/internal/db"
+	"books/internal/handler"
 	rabbitmq "books/internal/queue"
 	"log"
 	"net/http"
@@ -26,6 +27,8 @@ func main() {
 		Addr:    ":" + port,
 		Handler: mux,
 	}
+
+	mux.HandleFunc("GET /books/search", handler.SearchBooksByKeywords)
 
 	// this blocks forever, until the server
 	// has an unrecoverable error
