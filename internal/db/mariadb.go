@@ -13,12 +13,12 @@ import (
 const (
 	defaultMaxLifeTime = 3 * time.Second
 	defaultMaxOpenConn = 10
-	defaultConnTimeout = 5 * time.Second
+	defaultWaitTime    = 5 * time.Second
 )
 
 var connAttempts = 10
 
-func Connect() error {
+func Connect() (*sql.DB, error) {
 	// parseTime=true changes the output type of DATE and DATETIME values to time.Time
 	// instead of []byte / string
 	dsn := os.Getenv("DB_DSN")
@@ -40,7 +40,7 @@ func Connect() error {
 	for connAttempts > 0 {
 		db, err = sql.Open("mysql", dsn)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		// Ping ensures the connection has happened.
 		if err := db.Ping(); err == nil {
@@ -48,12 +48,12 @@ func Connect() error {
 		}
 
 		log.Printf("Mysql is trying to connect, attempt left: %d\n", connAttempts)
-		time.Sleep(defaultConnTimeout)
+		time.Sleep(defaultWaitTime)
 		connAttempts--
 	}
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	/* db.SetConnMaxLifetime() is required to ensure connections are closed by the driver safely before
@@ -67,5 +67,5 @@ func Connect() error {
 
 	log.Printf("Connected to MariaDB\n")
 
-	return nil
+	return db, nil
 }

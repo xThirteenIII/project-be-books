@@ -8,13 +8,13 @@ import (
 )
 
 func main() {
-	err := db.Connect()
+	_, err := db.Connect()
 	if err != nil {
 		log.Printf("Error while connecting to MariaDB: %v\nClosing app\n", err)
 		return
 	}
 
-	err = rabbitmq.AttemptConnect()
+	_, err = rabbitmq.AttemptConnect()
 	if err != nil {
 		log.Printf("Error while connecting to RabbitMQ: %v\nClosing app\n", err)
 		return
