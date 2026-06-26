@@ -1,15 +1,35 @@
 package rmq
 
 import (
+	"context"
 	"encoding/json"
 	"log"
+	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func StartReviewConsumer(ch *amqp.Channel, queueName string) error {
-	msgs, err := ch.Consume(
-		queueName,
+type ReviewJobProcessor interface {
+	EnrichReview(ctx context.Context, reviewID string, bookID int) error
+}
+
+type RabbitMQConsumer struct {
+	ch        *amqp.Channel
+	queueName string
+	processor ReviewJobProcessor
+}
+
+func NewConsumer(ch *amqp.Channel, queueName string, processor ReviewJobProcessor) *RabbitMQConsumer {
+	return &RabbitMQConsumer{
+		ch:        ch,
+		queueName: queueName,
+		processor: processor,
+	}
+}
+
+func (r *RabbitMQConsumer) StartReviewConsumer() error {
+	msgs, err := r.ch.Consume(
+		r.queueName,
 		"",
 		false, // autoAck false
 		false,
@@ -32,6 +52,17 @@ func StartReviewConsumer(ch *amqp.Channel, queueName string) error {
 				continue
 			}
 			log.Printf("message received: %s\n", msg.Body)
+
+			// sleeping 10 seconds to check review "pending" status before consuming the rabbit queue.
+			time.Sleep(10 * time.Second)
+			err := r.processor.EnrichReview(context.Background(), reviewJob.ReviewID, reviewJob.BookID)
+			if err != nil {
+				if err := msg.Nack(false, false); err != nil {
+					log.Printf("msg.Nack: %v\n", err)
+				}
+				continue
+			}
+
 			if err := msg.Ack(false); err != nil {
 				log.Printf("msg.Ack: %v\n", err)
 			}
