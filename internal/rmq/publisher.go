@@ -12,16 +12,36 @@ type ReviewJob struct {
 	BookID   int    `json:"book_id"`
 }
 
-func PublishReviewJob(ch *amqp.Channel, queueName string, job ReviewJob) error {
+type ReviewPublisher interface {
+	PublishReviewJob(ctx context.Context, reviewID string, bookID int) error
+}
+
+type RabbitMQPublisher struct {
+	ch        *amqp.Channel
+	queueName string
+}
+
+func NewPublisher(ch *amqp.Channel, queueName string) *RabbitMQPublisher {
+	return &RabbitMQPublisher{
+		ch:        ch,
+		queueName: queueName,
+	}
+}
+
+func (p *RabbitMQPublisher) PublishReviewJob(ctx context.Context, reviewID string, bookID int) error {
+	job := ReviewJob{
+		ReviewID: reviewID,
+		BookID:   bookID,
+	}
 	data, err := json.Marshal(job)
 	if err != nil {
 		return err
 	}
 
-	err = ch.PublishWithContext(
-		context.Background(),
-		"",        // default exchange
-		queueName, // routing key = queue name
+	err = p.ch.PublishWithContext(
+		ctx,
+		"",          // default exchange
+		p.queueName, // routing key = queue name
 		false,
 		false,
 		amqp.Publishing{
