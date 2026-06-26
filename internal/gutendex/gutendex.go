@@ -1,4 +1,5 @@
-package client
+// package client queries Gutendex APIs
+package gutendex
 
 import (
 	"encoding/json"
@@ -33,6 +34,8 @@ type Gutendex struct {
 	Count   int    `json:"count"`
 	Results []Book `json:"results"`
 }
+
+type GutendexClient struct{}
 
 // SearchBooksByString uses the passed parameter as the query parameter for gutendex API use.
 // It returns a slice of Books, built with the results from the search API.
@@ -74,7 +77,18 @@ func SearchBooksByString(s string) ([]Book, error) {
 
 // Returns an  if there is no match.
 // Chose returning an error over a bool to differentiate No Match from other errors.
-func SearchBooksByID(id int) error {
+
+// SearchBooksByID queries Gutendex API to check if a Book exists given a specific, single ID.
+// This is used for fast checking if a POST /review request body matches any Book in the Gutendex database.
+
+// Returns an  if there is no match.
+// Chose returning an error over a bool to differentiate No Match from other errors.
+// SearchByID wraps SearchBooksByID, mainly for testing purposes.
+// GutendexClient implements BookLookup interface.
+func (c *GutendexClient) SearchByID(id int) (Book, error) {
+	return SearchBooksByID(id)
+}
+func SearchBooksByID(id int) (Book, error) {
 
 	strID := strconv.Itoa(id)
 	// Parse URL
@@ -84,14 +98,14 @@ func SearchBooksByID(id int) error {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return err
+		return Book{}, err
 	}
 	req.Header.Add("Content-Type", "application/json")
 
 	// Send request
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		return Book{}, err
 	}
 	defer resp.Body.Close()
 
@@ -100,14 +114,14 @@ func SearchBooksByID(id int) error {
 	var g Gutendex
 
 	if err := json.NewDecoder(resp.Body).Decode(&g); err != nil {
-		return err
+		return Book{}, err
 	}
 
 	// len(slice) == 0 better than slice == nil.
 	// It covers both nil and empty slice.
 	//
 	if len(g.Results) == 0 {
-		return ErrNoMatch
+		return Book{}, ErrNoMatch
 	}
-	return nil
+	return g.Results[0], nil
 }
