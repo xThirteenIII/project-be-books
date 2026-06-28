@@ -46,7 +46,7 @@ func Run() {
 		nil,   // args
 	)
 	if err != nil {
-		log.Printf("can't declare publisher queue: %v\n", err)
+		log.Fatalf("can't declare publisher queue: %v\n", err)
 	}
 
 	reviewRepo := repo.NewMariaDBReviewRepository(db)
@@ -68,8 +68,12 @@ func Run() {
 		Handler: mux,
 	}
 
-	mux.HandleFunc("GET /books/search", handler.SearchBooksByKeywords)
+	// Use of singular instead of plural as written in the assignment.
+	mux.HandleFunc("GET /book/search", handler.SearchBooksByKeywords)
 	mux.HandleFunc("POST /review", reviewHandler.SubmitReview)
+	mux.HandleFunc("GET /review/{id}", reviewHandler.GetReview)
+	mux.HandleFunc("PUT /review/{id}", reviewHandler.UpdateReview)
+	mux.HandleFunc("DELETE /review/{id}", reviewHandler.DeleteReview)
 
 	// this blocks forever, until the server
 	// has an unrecoverable error
