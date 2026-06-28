@@ -1,1 +1,105 @@
-# project-be-books
+# Book review service
+
+Small Go HTTP service for searching books on Gutendex and managing async book reviews.
+
+## Requirements
+
+- Docker and Docker Compose
+- Go 1.24, only if you want to run tests or the API outside Docker
+
+## Run
+
+```bash
+docker compose up --build
+```
+
+The API listens on `http://localhost:8010`.
+
+The compose stack starts:
+
+- MariaDB on port `3306`
+- RabbitMQ on port `5672`
+- RabbitMQ management UI on `http://localhost:15672` with `user/password`
+- the Go API on port `8010`
+
+The database schema is loaded automatically from `migration/001_create_reviews_table.up.sql` when the MariaDB container initializes.
+
+If you reuse an old database container created before this migration was mounted, recreate it with:
+
+```bash
+docker compose down -v
+docker compose up --build
+```
+
+## Test
+
+```bash
+go test ./...
+```
+
+If your local Go cache is not writable, use:
+
+```bash
+GOCACHE=/tmp/project-be-books-go-cache go test ./...
+```
+
+## Endpoints
+
+### Search books
+
+```bash
+curl "http://localhost:8010/book/search?q=moby%20dick"
+```
+
+### Submit review
+
+```bash
+curl -X POST http://localhost:8010/review \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 2701,
+    "review": "Bel libro, molto coinvolgente.",
+    "score": 8
+  }'
+```
+
+The response is `202 Accepted` and returns a generated `review_id`.
+
+### Get review status
+
+```bash
+curl "http://localhost:8010/review/{review_id}"
+```
+
+The response is:
+
+- `202 Accepted` while the review is still pending
+- `200 OK` when the review has been enriched with book metadata
+
+### Update review
+
+```bash
+curl -X PUT http://localhost:8010/review/{review_id} \
+  -H "Content-Type: application/json" \
+  -d '{
+    "review": "Updated review text.",
+    "score": 9
+  }'
+```
+
+Returns `204 No Content`.
+
+### Delete review
+
+```bash
+curl -X DELETE http://localhost:8010/review/{review_id}
+```
+
+Returns `204 No Content`.
+
+## Notes
+
+- `POST /review` validates the book id against Gutendex before storing the review.
+- Reviews are first saved with `pending` status.
+- A RabbitMQ consumer enriches reviews asynchronously with title, authors and cover URL.
+- If async enrichment fails, the review is marked as `failed` instead of staying pending forever.
