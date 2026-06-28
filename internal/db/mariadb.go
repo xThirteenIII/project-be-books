@@ -11,13 +11,16 @@ import (
 )
 
 const (
-	defaultMaxLifeTime = 3 * time.Second
-	defaultMaxOpenConn = 10
-	defaultWaitTime    = 5 * time.Second
+	defaultMaxLifeTime  = 3 * time.Second
+	defaultMaxOpenConn  = 10
+	defaultWaitTime     = 5 * time.Second
+	defaultConnAttempts = 10
 )
 
-var connAttempts = 10
-
+// Connect connects to MariaDB.
+// It attempts connection 10 times at the most, with a 5 second interval in between.
+// It uses the env var DB_DSN from the docker-compose file, it uses localhost if the http server is run
+// outside from docker.
 func Connect() (*sql.DB, error) {
 	// parseTime=true changes the output type of DATE and DATETIME values to time.Time
 	// instead of []byte / string
@@ -37,17 +40,19 @@ func Connect() (*sql.DB, error) {
 	// close a [DB].
 	var err error
 	var db *sql.DB
+	connAttempts := defaultConnAttempts
 	for connAttempts > 0 {
 		db, err = sql.Open("mysql", dsn)
 		if err != nil {
 			return nil, err
 		}
 		// Ping ensures the connection has happened.
-		if err := db.Ping(); err == nil {
+		if err = db.Ping(); err == nil {
 			break
 		}
 
-		log.Printf("Mysql is trying to connect, attempt left: %d\n", connAttempts)
+		db.Close()
+		log.Printf("Mysql is trying to connect, attempts left: %d\n", connAttempts)
 		time.Sleep(defaultWaitTime)
 		connAttempts--
 	}
