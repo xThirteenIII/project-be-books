@@ -2,14 +2,17 @@ package app
 
 import (
 	"books/internal/db"
+	"books/internal/gutendex"
 	"books/internal/handler"
+	"books/internal/repo"
 	"books/internal/rmq"
+	"books/internal/service"
 	"log"
 	"net/http"
 )
 
 func Run() {
-	_, err := db.Connect()
+	db, err := db.Connect()
 	if err != nil {
 		log.Printf("Error while connecting to MariaDB: %v\nClosing app\n", err)
 		return
@@ -33,8 +36,9 @@ func Run() {
 		log.Fatalf("could not create consumer channel: %v\n", err)
 	}
 
+	queueName := "review_job"
 	q, err := publishCh.QueueDeclare(
-		"review_enrichment",
+		queueName,
 		true,  // durable
 		false, // autodelete
 		false, // exclusive
@@ -45,15 +49,14 @@ func Run() {
 		log.Printf("can't declare publisher queue: %v\n", err)
 	}
 
-	err = rmq.PublishReviewJob(publishCh, q.Name, rmq.ReviewJob{
-		ReviewID: "100",
-		BookID:   10,
-	})
-	if err != nil {
-		log.Printf("can't Publish on %s queue: %v\n", q.Name, err)
-	}
+	reviewRepo := repo.NewMariaDBReviewRepository(db)
+	publisher := rmq.NewPublisher(publishCh, queueName)
+	var gutendexClient gutendex.GutendexClient
+	reviewService := service.NewReviewService(reviewRepo, publisher, &gutendexClient)
+	reviewHandler := handler.NewReviewHandler(reviewService)
 
-	err = rmq.StartReviewConsumer(consumerCh, q.Name)
+	consumer := rmq.NewConsumer(consumerCh, queueName, reviewService)
+	err = consumer.StartReviewConsumer()
 	if err != nil {
 		log.Printf("can't Consume on %s queue: %v\n", q.Name, err)
 	}
@@ -66,7 +69,7 @@ func Run() {
 	}
 
 	mux.HandleFunc("GET /books/search", handler.SearchBooksByKeywords)
-	mux.HandleFunc("POST /review", handler.SubmitReview)
+	mux.HandleFunc("POST /review", reviewHandler.SubmitReview)
 
 	// this blocks forever, until the server
 	// has an unrecoverable error
