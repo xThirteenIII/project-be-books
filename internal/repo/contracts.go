@@ -10,7 +10,7 @@ type (
 	ReviewRepo interface {
 		Insert(ctx context.Context, r model.Review) error
 		Update(ctx context.Context, r model.Review) error
-		GetByID(ctx context.Context, id string) error
-		Delete(ctx context.Context, id string) error
+		GetByID(ctx context.Context, id string) (model.Review, error)
+		Delete(ctx context.Context, id string)
 	}
 )
