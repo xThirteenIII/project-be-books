@@ -9,7 +9,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-var connAttempts = 10
+const connAttempts = 10
 
 func AttemptConnect() (*amqp.Connection, error) {
 	rabbitURL := os.Getenv("RABBITMQ_URL")
@@ -18,26 +18,17 @@ func AttemptConnect() (*amqp.Connection, error) {
 	}
 	var err error
 	var conn *amqp.Connection
-	for connAttempts > 0 {
+	for attemptsLeft := connAttempts; attemptsLeft > 0; attemptsLeft-- {
 		conn, err = amqp.Dial(rabbitURL)
 		if err == nil {
 			break
 		}
-		log.Printf("RabbitMQ is trying to connect, attempts left: %d\n", connAttempts)
+		log.Printf("RabbitMQ is trying to connect, attempts left: %d\n", attemptsLeft)
 		time.Sleep(5 * time.Second)
-		connAttempts--
-
 	}
 	if err != nil {
 		return nil, fmt.Errorf("amqp.Dial: %v\n", err)
 	}
-	//defer conn.Close()
-	log.Printf("Connection to RabbiMQ successful.\n")
-	/*
-		signalChan := make(chan os.Signal, 1)
-		signal.Notify(signalChan, os.Interrupt)
-		<-signalChan
-		log.Printf("Exiting gracefully...\n")
-	*/
+	log.Printf("Connection to RabbitMQ successful.\n")
 	return conn, nil
 }
