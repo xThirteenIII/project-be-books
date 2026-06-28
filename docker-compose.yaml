@@ -9,6 +9,8 @@ services:
       MYSQL_DATABASE: books
     ports:
       - "3306:3306"
+    volumes:
+      - ./migration/001_create_reviews_table.up.sql:/docker-entrypoint-initdb.d/001_create_reviews_table.sql:ro
 
   rabbitmq:
     image: rabbitmq:4.3.2-management
