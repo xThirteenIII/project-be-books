@@ -2,10 +2,12 @@
 
 Small Go HTTP service for searching books on Gutendex and managing async book reviews.
 
+
 ## Requirements
 
 - Docker and Docker Compose
 - Go 1.24, only if you want to run tests or the API outside Docker
+- curl, only if you want to run tests on the endpoints
 
 ## Run
 
@@ -31,16 +33,16 @@ docker compose down -v
 docker compose up --build
 ```
 
+## Check if the 'reviews' table has been created
+
+```bash
+docker compose exec -T db mariadb -u user -ppassword books -e "SHOW TABLES;"
+```
+
 ## Test
 
 ```bash
 go test ./...
-```
-
-If your local Go cache is not writable, use:
-
-```bash
-GOCACHE=/tmp/project-be-books-go-cache go test ./...
 ```
 
 ## Endpoints
