@@ -33,13 +33,13 @@ docker compose down -v
 docker compose up --build
 ```
 
-## Check if the 'reviews' table has been created
+Check if the 'reviews' table has been created  
 
 ```bash
 docker compose exec -T db mariadb -u user -ppassword books -e "SHOW TABLES;"
 ```
 
-## Test
+## Service test
 
 ```bash
 go test ./...
@@ -99,7 +99,7 @@ curl -X DELETE http://localhost:8010/review/{review_id}
 
 Returns `204 No Content`.
 
-## Notes
+
 
 - `POST /review` validates the book id against Gutendex before storing the review.
 - Reviews are first saved with `pending` status.
