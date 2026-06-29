@@ -152,9 +152,9 @@ Returns `204 No Content`.
 
 ## Troubleshooting
 
-On some work laptops, corporate VPNs or proxies may intercept HTTPS traffic and prevent the application from reaching the Gutendex API.[web:2225][web:2227]
+On some work laptops, corporate VPNs or proxies may intercept HTTPS traffic and prevent the application from reaching the Gutendex API.
 
-In this case, calls such as `GET /book/search?q={keywords}` or `POST /review` may fail with TLS or x509 certificate errors.[web:2225][web:2227]
+In this case, calls such as `GET /book/search?q={keywords}` or `POST /review` may fail with TLS or x509 certificate errors.
 
 If this happens:
 
