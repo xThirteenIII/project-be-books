@@ -2,6 +2,19 @@
 
 Small Go HTTP service for searching books on Gutendex and managing async book reviews.
 
+## Table of Contents
+
+- [Requirements](#requirements)
+- [Run](#run)
+- [Unit tests](#unit-tests)
+- [Endpoints](#endpoints)
+  - [Search books](#search-books)
+  - [Submit review](#submit-review)
+  - [Get review status](#get-review-status)
+  - [Update review](#update-review)
+  - [Delete review](#delete-review)
+- [Notes](#notes)
+
 
 ## Requirements
 
@@ -39,7 +52,18 @@ Check if the 'reviews' table has been created
 docker compose exec -T db mariadb -u user -ppassword books -e "SHOW TABLES;"
 ```
 
-## Service test
+## Unit tests
+
+The project includes unit tests for the service layer.
+
+They validate:
+- review input validation
+- book existence checks against the mocked Gutendex dependency
+- repository and publisher error propagation
+- review retrieval, update and deletion
+- async enrichment failure handling
+
+Run the tests with:
 
 ```bash
 go test ./...
