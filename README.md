@@ -13,14 +13,13 @@ Small Go HTTP service for searching books on Gutendex and managing async book re
   - [Get review status](#get-review-status)
   - [Update review](#update-review)
   - [Delete review](#delete-review)
-- [Notes](#notes)
-
+- [Troubleshooting](#troubleshooting)
 
 ## Requirements
 
 - Docker and Docker Compose
 - Go 1.24, only if you want to run tests or the API outside Docker
-- curl, only if you want to run tests on the endpoints
+- curl, only if you want to test the endpoints manually
 
 ## Run
 
@@ -46,21 +45,28 @@ docker compose down -v
 docker compose up --build
 ```
 
-Check if the 'reviews' table has been created  
+To verify that the `reviews` table has been created:
 
 ```bash
 docker compose exec -T db mariadb -u user -ppassword books -e "SHOW TABLES;"
+```
+
+To later verify table contents:
+
+```bash
+docker compose exec -T db mariadb -u user -ppassword books -e "SELECT * FROM reviews;"
 ```
 
 ## Unit tests
 
 The project includes unit tests for the service layer.
 
-They validate:
+They cover:
+
 - review input validation
-- book existence checks against the mocked Gutendex dependency
+- book existence checks against a mocked Gutendex dependency
 - repository and publisher error propagation
-- review retrieval, update and deletion
+- review retrieval, update, and deletion
 - async enrichment failure handling
 
 Run the tests with:
@@ -73,11 +79,15 @@ go test ./...
 
 ### Search books
 
+`GET /book/search?q={keywords}`
+
 ```bash
 curl "http://localhost:8010/book/search?q=moby%20dick"
 ```
 
 ### Submit review
+
+`POST /review`
 
 ```bash
 curl -X POST http://localhost:8010/review \
@@ -91,7 +101,20 @@ curl -X POST http://localhost:8010/review \
 
 The response is `202 Accepted` and returns a generated `review_id`.
 
+Additional notes:
+
+- `POST /review` validates the book id against Gutendex before storing the review.
+- Reviews are first saved with `pending` status.
+- A RabbitMQ consumer enriches reviews asynchronously with title, authors, and cover URL.
+- If async enrichment fails, the review is marked as `failed` instead of remaining `pending` indefinitely.
+
+To verify this behaviour end-to-end I put a time.Sleep(10 * time.Second) before enriching the review in `internal/rmq/consumer.go`, `line 57`.  
+The line is now commented.  
+This gives enough time to check DB content before the review goes from `pending` to `ready`.
+
 ### Get review status
+
+`GET /review/{review_id}`
 
 ```bash
 curl "http://localhost:8010/review/{review_id}"
@@ -103,6 +126,8 @@ The response is:
 - `200 OK` when the review has been enriched with book metadata
 
 ### Update review
+
+`PUT /review/{review_id}`
 
 ```bash
 curl -X PUT http://localhost:8010/review/{review_id} \
@@ -117,15 +142,34 @@ Returns `204 No Content`.
 
 ### Delete review
 
+`DELETE /review/{review_id}`
+
 ```bash
 curl -X DELETE http://localhost:8010/review/{review_id}
 ```
 
 Returns `204 No Content`.
 
+## Troubleshooting
 
+On some work laptops, corporate VPNs or proxies may intercept HTTPS traffic and prevent the application from reaching the Gutendex API.[web:2225][web:2227]
 
-- `POST /review` validates the book id against Gutendex before storing the review.
-- Reviews are first saved with `pending` status.
-- A RabbitMQ consumer enriches reviews asynchronously with title, authors and cover URL.
-- If async enrichment fails, the review is marked as `failed` instead of staying pending forever.
+In this case, calls such as `GET /book/search?q={keywords}` or `POST /review` may fail with TLS or x509 certificate errors.[web:2225][web:2227]
+
+If this happens:
+
+1. Disable the VPN and try again.
+2. If the problem persists, run only MariaDB and RabbitMQ with Docker Compose.
+3. Start the Go API separately from your local machine.
+
+Start MariaDB and RabbitMQ:
+
+```bash
+docker compose up db rabbitmq
+```
+
+Then, in a separate terminal:
+
+```bash
+go run cmd/api/main.go
+```
