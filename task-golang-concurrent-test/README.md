@@ -1,5 +1,9 @@
 # Solution
-Ho aggiunto un mutex come campo del MeasuredWorker dal momento che Work() incrementava m.value++ ma l'accesso concorrente al campo non e' bloccato per la scrittura. In questo modo e' garantito l'incremento thread safety. Nel metodo Work() quindi blocco il mutex, scrivo e poi sblocco. Ho aggiunto anche una seconda soluzione, cambiando il tipo di value da int ad atomic.Int64. In questo modo le operazioni di scrittura di value.Add(1) e value.Load() sono thread-safety per definizione. Cosi il test passava, ma ci metteva comunque 20 secondi. Questo perche' in main_test.go si testava lo SlowWorker, che aveva uno sleep di 5 secondi al suo interno. Ho quindi creato un worker che implementa l'interfaccia MeasuredWorker con il metodo Work() senza sleep. In questo modo il test passa e dura tra i 0.003 e 0.004 secondi.
+Ho reso MeasuredWorker thread-safe aggiungendo un mutex sul campo value, così Work() può incrementarlo in modo sicuro con accesso esclusivo.
+In alternativa, ho provato anche a sostituire int con atomic.Int64, usando Add(1) e Load() per garantire la sicurezza concorrente senza mutex.
+Nel test ho poi evitato di usare SlowWorker, perché il suo sleep di 5 secondi faceva durare l’esecuzione circa 20 secondi.
+Al suo posto ho creato workerFunc, un tipo funzione che implementa Work() e soddisfa l’interfaccia Worker, così nei test posso passare un worker finto che non fa nulla ma permette di testare solo la logica di conteggio.
+In questo modo il test resta corretto e scende a circa 3–4 millisecondi.
 
 # Golang concurrent test
 
