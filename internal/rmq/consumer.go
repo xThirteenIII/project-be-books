@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"log"
-	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -53,8 +52,9 @@ func (r *RabbitMQConsumer) StartReviewConsumer() error {
 			}
 			log.Printf("message received: %s\n", msg.Body)
 
+			// Uncomment this to test the pending status really happens.
 			// sleeping 10 seconds to check review "pending" status before consuming the rabbit queue.
-			time.Sleep(10 * time.Second)
+			// time.Sleep(10 * time.Second)
 			err := r.processor.EnrichReview(context.Background(), reviewJob.ReviewID, reviewJob.BookID)
 			if err != nil {
 				if err := msg.Nack(false, false); err != nil {
